@@ -57,9 +57,10 @@ app.config.from_object(Config)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 db = SQLAlchemy(app)
 
-# ✅ FIX: Create tables on startup (Railway fix)
-with app.app_context():
-    db.create_all()
+# ✅ FIX: db.create_all() moved to end of file (after all models)
+# The line below is REMOVED - it caused ModuleNotFoundError because models were not defined yet.
+# with app.app_context():
+#     db.create_all()
 
 babel = Babel(app)
 
@@ -1873,14 +1874,17 @@ def render_site(path):
         return render_template_string(page.content, **theme_ctx)
 
 # ============================================
+# CREATE TABLES ON STARTUP (Railway fix)
+# ✅ MOVED HERE - after all models are defined
+# ============================================
+with app.app_context():
+    db.create_all()
+
+# ============================================
 # MAIN ENTRY POINT - RAILWAY READY
 # ============================================
 
 if __name__ == '__main__':
-    # Tables already created at app start, but this ensures they exist in dev too
-    with app.app_context():
-        db.create_all()
-    
     print("🚀 AdiPress v3.1 Starting on Railway...")
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
